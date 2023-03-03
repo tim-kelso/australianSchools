@@ -30,11 +30,12 @@ Enrolments_bySchoolSector <- schoolList2008_2020 %>%
   mutate(proportion = round(100*total/sum(total), digits = 1)) %>% 
   ggplot(aes(x = Calendar.Year, y = proportion, group = School.Sector)) +
   geom_col(aes(fill = School.Sector)) +
-  geom_label(aes(label = proportion), size = 2.5, position = position_stack(vjust = 0.5))+
+  geom_label(aes(label = proportion), size = 2.5,d position = position_stack(vjust = 0.5))+
   theme_classic() +
   labs(title = "School Enrolments by Sector",
        y = "% of total",
        x = "Year") +
   scale_x_continuous(breaks = c(2008, 2010, 2012, 2014, 2016, 2018, 2020))+
   coord_cartesian(expand = FALSE)
+ggsave("../images/Enrolments_bySchoolSector.png", dpi = 300)
 ```
