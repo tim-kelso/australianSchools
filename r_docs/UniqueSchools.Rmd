@@ -1,0 +1,73 @@
+---
+title: "How do total school numbers change across the years??"
+author: "Tim Kelso"
+date: `r Sys.Date()`
+output: pdf_document
+
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE, include = TRUE)
+library(lubridate)
+library(readxl)
+library(tidyverse)
+```
+
+```{r  import and clean data, include = FALSE}
+source('../scripts/01-import.R')
+source('../scripts/02-clean.R')
+#source('../scripts/03-join.R') #not required here
+#source('../scripts/04-tidy.R')
+```
+
+``` {r uniqueSchools}
+schoolLocation_yearly %>% 
+  group_by(Calendar.Year) %>% 
+  summarise(n = n())
+  #arrange(ACARA.SML.ID, Calendar.Year) %>% 
+  #mutate(index = rank(Calendar.Year, ties.method = "first"),
+  #       maxIndex = max(index),
+  #       firstYear = min(Calendar.Year),
+  #       finalYear = max(Calendar.Year),
+  #       schoolOpen = ifelse(finalYear >= Calendar.Year, "Yes", "No"),
+  #       status = case_when(
+   #        index == 1 ~ "New",
+   #        index >= 2 ~ "Existing"
+  #       )) %>% 
+  #ungroup() %>% 
+  #count(ACARA.SML.ID, firstYear, finalYear)
+#  filter(maxIndex < 14, firstYear == 2008)
+  #group_by(Calendar.Year, status) %>% 
+  #summarise(n = n()) %>% 
+  ungroup() %>% 
+#i suspect that schools that are not in existence in 2021 are not included in this list - it seems uncanny that all schools in this list have their final year as 2021, indicating that no schools have closed permanently since the list started
+  ggplot(aes(x = Calendar.Year, y = n, grouping = status)) +
+  geom_col(aes(fill = status)) +
+  geom_text(aes(label = n), size = 2.5, vjust = -0.5)+
+  theme_classic() +
+  labs(title = "Number of Australian Schools by Year",
+       y = "Count") +
+  theme(axis.title.x = element_blank()) + 
+  #scale_x_continuous(breaks = c(2008, 2010, 2012, 2014, 2016, 2018, 2020))+
+  ylim(0, 10000)+
+  coord_cartesian(expand = FALSE)
+```
+
+
+```{r comparison of profile and location lists}
+schoolLocation_2021 %>% 
+  summarise(n = n())
+
+schoolProfile_2021 %>% 
+  summarise(n = n())
+
+schoolsInLocationListOnly <- schoolLocation_2021 %>% 
+  anti_join(schoolList_profile_2021, by = "ACARA.SML.ID") 
+
+#comparison of ACARAs not in dynamics with schools only on location list
+ACARAs_NotInDynamics %>% 
+  anti_join(schoolsInLocationListOnly, by = c("Acara" = "ACARA.SML.ID")) %>% 
+  summarise(n = n())
+
+#write.csv(schoolsInLocationListOnly, "../../QTA/data_raw/ACARAList_ToLoadInDynamics.csv")
+```
