@@ -1,0 +1,88 @@
+---
+title: "How many government schools are in each state with 50% bottom SEA?"
+author: "Tim Kelso"
+date: `r Sys.Date()`
+output: pdf_document
+
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE, include = TRUE)
+library(lubridate)
+library(readxl)
+library(tidyverse)
+```
+
+```{r  import and clean data, include = FALSE}
+source('../scripts/01-import.R')
+source('../scripts/02-clean.R')
+#source('../scripts/03-join.R') #not required here
+#source('../scripts/04-tidy.R')
+```
+
+
+``` {r uniqueSchools}
+totalSchools <- schoolProfile_2022 %>% 
+  filter(School.Sector == "Government",
+         Bottom.SEA.Quarter.... >= 50) %>% 
+  group_by(State) %>% 
+  summarise(Total = n())
+
+totalSchools_teacherFTE <- schoolProfile_2022 %>% 
+  filter(School.Sector == "Government",
+         Bottom.SEA.Quarter.... >= 50) %>% 
+  group_by(State) %>% 
+  summarise(TotalSchools = n(),
+            AverageTeachingStaffFTE = round(mean(Full.Time.Equivalent.Teaching.Staff, na.rm = T),1),
+            AverageNonTeachingStaffFTE = round(mean(Full.Time.Equivalent.Non.Teaching.Staff, na.rm = T),1)
+            )
+
+write.csv(totalSchools_teacherFTE, "../data_processed/PRF Scoping Table - Bottom SEA Quarter by State with Teacher FTE.csv", row.names = F)
+
+totalSchools_bySchoolType <- schoolProfile_2022 %>% 
+  filter(School.Sector == "Government",
+         Bottom.SEA.Quarter.... >= 50) %>% 
+  group_by(State, School.Type) %>% 
+  summarise(count = n()) %>% 
+  mutate(prop = round(prop.table(count)*100, 0)) %>% 
+  pivot_wider(values_from = c("count", "prop"), names_from = "School.Type", names_vary = "slowest", names_glue = "{School.Type}_{.value}") %>% 
+  rename_with(.fn = ~str_replace(string = ., pattern = "prop", replacement = "%"), .cols = contains("prop"))
+
+
+totalSchools_byGeolocation <- schoolProfile_2022 %>% 
+  filter(School.Sector == "Government",
+         Bottom.SEA.Quarter.... >= 50) %>% 
+  group_by(State, Geolocation) %>% 
+  summarise(count = n()) %>% 
+  mutate(prop = round(prop.table(count)*100, 0)) %>% 
+  pivot_wider(values_from = c("count", "prop"), names_from = "Geolocation", names_vary = "slowest", names_glue = "{Geolocation}_{.value}")%>% 
+  rename_with(.fn = ~str_replace(string = ., pattern = "prop", replacement = "%"), .cols = contains("prop"))
+
+
+fullTable <- totalSchools %>% 
+  left_join(totalSchools_bySchoolType,  by = "State") %>% 
+  left_join(totalSchools_byGeolocation,  by = "State")
+
+write.csv(fullTable, "../data_processed/PRF Scoping Table - Bottom SEA Quarter by State, School Type, Geolocation.csv", row.names = F)
+```
+
+```{r NSW schools in bottom 15% ICSEA - average FTE teaching staff}
+totalSchools <- schoolProfile_2022 %>% 
+  filter(School.Sector == "Government",
+         State == "NSW",
+         ICSEA.Percentile <= 15) %>% 
+  summarise(Total = n()) %>% 
+  pull(Total)
+
+totalSchools_teacherFTE <- schoolProfile_2022 %>% 
+  filter(School.Sector == "Government",
+         State == "NSW",
+         ICSEA.Percentile <= 15) %>% 
+  summarise(TotalSchools = n(),
+            AverageTeachingStaffFTE = round(mean(Full.Time.Equivalent.Teaching.Staff, na.rm = T),1),
+            AverageNonTeachingStaffFTE = round(mean(Full.Time.Equivalent.Non.Teaching.Staff, na.rm = T),1)
+            )
+
+write.csv(totalSchools_teacherFTE, "../data_processed/PRF Scoping Table - Bottom 15th Percentile ICSEA with Average Teacher FTE.csv", row.names = F)
+
+```
